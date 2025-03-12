@@ -173,6 +173,7 @@ end
 
 
 function ShiftLockController.Init(player: Player, character: Model)
+	if _initialized then return end
 	_character = character
 		
 	local hrp = _character:WaitForChild("HumanoidRootPart", 2)
