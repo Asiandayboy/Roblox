@@ -118,7 +118,7 @@ function DraggableUI.Enable(draggableObj: Draggable)
 			if draggableObj.OnDragEnd then 
 				local mousePos = UIS:GetMouseLocation()
 				local guisAtPos = playerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y - GuiService:GetGuiInset().Y)
-				task.spawn(draggableObj.OnDragEnd, UIS:GetMouseLocation(), guisAtPos) 
+				task.spawn(draggableObj.OnDragEnd, mousePos, guisAtPos) 
 			end
 		end
 	end)
