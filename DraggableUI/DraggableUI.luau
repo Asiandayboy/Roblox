@@ -3,13 +3,16 @@ local DraggableUI = {}
 
 local UIS = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer::Player
+local playerGui = player.PlayerGui
 
 
 export type Draggable = {
 	ID: number,
 	OnDragStart: (() -> ())?,
 	OnDragMove: ((mousePos: Vector2) -> ())?,
-	OnDragEnd: ((mousePos: Vector2) -> ())?
+	OnDragEnd: ((mousePos: Vector2, guisAtPos: { GuiObject }) -> ())?
 }
 
 type _Draggable = {
@@ -112,7 +115,11 @@ function DraggableUI.Enable(draggableObj: Draggable)
 			revertToParentProps(_props)
 			disconnectCon(_props._moveCon)
 			
-			if draggableObj.OnDragEnd then task.spawn(draggableObj.OnDragEnd, UIS:GetMouseLocation()) end
+			if draggableObj.OnDragEnd then 
+				local mousePos = UIS:GetMouseLocation()
+				local guisAtPos = playerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y - GuiService:GetGuiInset().Y)
+				task.spawn(draggableObj.OnDragEnd, UIS:GetMouseLocation(), guisAtPos) 
+			end
 		end
 	end)
 end
