@@ -12,12 +12,13 @@ export type Draggable = {
 	ID: number,
 	OnDragStart: (() -> ())?,
 	OnDragMove: ((mousePos: Vector2) -> ())?,
-	OnDragEnd: ((mousePos: Vector2, guisAtPos: { GuiObject }) -> ())?
+	OnDragEnd: ((mousePos: Vector2, guisAtPos: { GuiObject }, wasDragged: boolean) -> ())?
 }
 
 type _Draggable = {
 	_instance: GuiObject,
 	_mouse1Down: boolean,
+	_dragging: boolean,
 	_parent: any,
 	_size: Vector2,
 	_pos: Vector2,
@@ -64,6 +65,7 @@ function DraggableUI.new(guiObj: GuiObject): Draggable
 	local _props = {
 		_instance = guiObj,
 		_mouse1Down = false,
+		_dragging = false,
 		_parent = nil,
 		_size = Vector2.zero,
 		_pos = Vector2.zero,
@@ -100,6 +102,7 @@ function DraggableUI.Enable(draggableObj: Draggable)
 
 			_props._moveCon = UIS.InputChanged:Connect(function(uisInput: InputObject)
 				if uisInput.UserInputType == Enum.UserInputType.MouseMovement and _props._mouse1Down then
+					_props._dragging = true
 					local mouse = UIS:GetMouseLocation()
 					guiObj.Position = UDim2.new(0, mouse.X - _props._size.X/2, 0, mouse.Y - _props._size.Y/2)
 					if draggableObj.OnDragMove then task.spawn(draggableObj.OnDragMove, mouse) end
@@ -111,15 +114,16 @@ function DraggableUI.Enable(draggableObj: Draggable)
 	_props._inputEnded = guiObj.InputEnded:Connect(function(input: InputObject)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			_props._mouse1Down = false
-
 			revertToParentProps(_props)
 			disconnectCon(_props._moveCon)
 			
 			if draggableObj.OnDragEnd then 
 				local mousePos = UIS:GetMouseLocation()
 				local guisAtPos = playerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y - GuiService:GetGuiInset().Y)
-				task.spawn(draggableObj.OnDragEnd, mousePos, guisAtPos) 
+				task.spawn(draggableObj.OnDragEnd, mousePos, guisAtPos, _props._dragging) 
 			end
+			
+			_props._dragging = false
 		end
 	end)
 end
