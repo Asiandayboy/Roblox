@@ -73,7 +73,7 @@ function DraggableUI.new(guiObj: GuiObject): Draggable
 		_dragParent = screenGui,
 		_parentSize = UDim2.new(),
 		_parentPos = UDim2.new(),
-		_guiInsetIgnored = screenGui.IgnoreGuiInset
+		_guiInsetIgnored = screenGui.IgnoreGuiInset::boolean
 	}::_Draggable
 	
 	table.insert(_objs, _props)
