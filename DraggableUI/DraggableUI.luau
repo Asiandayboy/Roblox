@@ -139,7 +139,6 @@ function DraggableUI.Destroy(draggableObj: Draggable)
 	
 	DraggableUI.Disable(draggableObj)
 	table.remove(_objs, draggableObj.ID)
-	warn("DESTROYED!")
 end
 
 
