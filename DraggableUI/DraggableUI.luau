@@ -28,6 +28,7 @@ type _Draggable = {
 	_moveCon: RBXScriptConnection?,
 	_inputBegan: RBXScriptConnection?,
 	_inputEnded: RBXScriptConnection?,
+	_guiInsetIgnored: boolean,
 }
 
 
@@ -72,6 +73,7 @@ function DraggableUI.new(guiObj: GuiObject): Draggable
 		_dragParent = screenGui,
 		_parentSize = UDim2.new(),
 		_parentPos = UDim2.new(),
+		_guiInsetIgnored = screenGui.IgnoreGuiInset
 	}::_Draggable
 	
 	table.insert(_objs, _props)
@@ -87,24 +89,29 @@ function DraggableUI.Enable(draggableObj: Draggable)
 	local _props = _objs[draggableObj.ID]
 	local guiObj = _props._instance
 	
+
 	_props._inputBegan = guiObj.InputBegan:Connect(function(input: InputObject)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			_props._mouse1Down = true
 			
 			saveParentProps(_props)
+			local guiInset = _props._guiInsetIgnored and GuiService:GetGuiInset() or Vector2.zero
 
 			guiObj.Parent = _props._dragParent
 			guiObj.Size = UDim2.new(0, _props._size.X, 0, _props._size.Y)
-			guiObj.Position = UDim2.new(0, math.ceil(_props._pos.X), 0, _props._pos.Y+GuiService:GetGuiInset().Y)
+			guiObj.Position = UDim2.new(0, math.ceil(_props._pos.X), 0, _props._pos.Y+guiInset.Y)
 			guiObj.ZIndex += 10
 			
 			if draggableObj.OnDragStart then task.spawn(draggableObj.OnDragStart) end
+			
+			local initialMousePos = UIS:GetMouseLocation()
+			local offset = _props._pos - initialMousePos + guiInset
 
 			_props._moveCon = UIS.InputChanged:Connect(function(uisInput: InputObject)
 				if uisInput.UserInputType == Enum.UserInputType.MouseMovement and _props._mouse1Down then
 					_props._dragging = true
 					local mouse = UIS:GetMouseLocation()
-					guiObj.Position = UDim2.new(0, mouse.X - _props._size.X/2, 0, mouse.Y - _props._size.Y/2)
+					guiObj.Position = UDim2.new(0, mouse.X + offset.X, 0, mouse.Y + offset.Y)
 					if draggableObj.OnDragMove then task.spawn(draggableObj.OnDragMove, mouse) end
 				end
 			end)
