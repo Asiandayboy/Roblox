@@ -102,13 +102,14 @@ function DraggableUI.Enable(draggableObj: Draggable)
 			guiObj.Position = UDim2.new(0, math.ceil(_props._pos.X), 0, _props._pos.Y+guiInset.Y)
 			guiObj.ZIndex += 10
 			
-			if draggableObj.OnDragStart then task.spawn(draggableObj.OnDragStart) end
-			
 			local initialMousePos = UIS:GetMouseLocation()
 			local offset = _props._pos - initialMousePos + guiInset
 
 			_props._moveCon = UIS.InputChanged:Connect(function(uisInput: InputObject)
 				if uisInput.UserInputType == Enum.UserInputType.MouseMovement and _props._mouse1Down then
+					if not _props._dragging then
+						if draggableObj.OnDragStart then task.spawn(draggableObj.OnDragStart) end
+					end
 					_props._dragging = true
 					local mouse = UIS:GetMouseLocation()
 					guiObj.Position = UDim2.new(0, mouse.X + offset.X, 0, mouse.Y + offset.Y)
