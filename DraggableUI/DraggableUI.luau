@@ -130,13 +130,13 @@ function DraggableUI.Enable(draggableObj: Draggable)
 			revertToParentProps(_props)
 			disconnectCon(_props._moveCon)
 			
+			_props._dragging = false
+			
 			if draggableObj.OnDragEnd then 
 				local mousePos = UIS:GetMouseLocation()
 				local guisAtPos = playerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y - GuiService:GetGuiInset().Y)
-				task.spawn(draggableObj.OnDragEnd, mousePos, guisAtPos, _props._dragging) 
+				task.spawn(draggableObj.OnDragEnd, mousePos, guisAtPos, true) 
 			end
-			
-			_props._dragging = false
 		end
 	end)
 end
