@@ -85,6 +85,11 @@ function DraggableUI.new(guiObj: GuiObject): Draggable
 	return props
 end
 
+function DraggableUI.IsDragging(draggableObj: Draggable): boolean
+	local _props = _objs[draggableObj.ID]
+	return _props._dragging
+end
+
 function DraggableUI.Enable(draggableObj: Draggable)
 	local _props = _objs[draggableObj.ID]
 	local guiObj = _props._instance
