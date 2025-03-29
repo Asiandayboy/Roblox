@@ -1,4 +1,5 @@
 --!strict
+--[[ v1.0.0 - 3/29/2025 ]]
 local DraggableUI = {}
 
 local UIS = game:GetService("UserInputService")
@@ -10,6 +11,10 @@ local playerGui = player.PlayerGui
 
 export type Draggable = {
 	ID: number,
+	--[[
+		If BeforeDragStart returns true, the drag will start, else it will not start.
+	]]
+	BeforeDragStart: (() -> boolean)?,
 	OnDragStart: (() -> ())?,
 	OnDragMove: ((mousePos: Vector2) -> ())?,
 	OnDragEnd: ((mousePos: Vector2, guisAtPos: { GuiObject }, wasDragged: boolean) -> ())?
@@ -94,9 +99,14 @@ function DraggableUI.Enable(draggableObj: Draggable)
 	local _props = _objs[draggableObj.ID]
 	local guiObj = _props._instance
 	
+	local canStartDrag = true
 
 	_props._inputBegan = guiObj.InputBegan:Connect(function(input: InputObject)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			canStartDrag = draggableObj.BeforeDragStart and draggableObj.BeforeDragStart()
+			
+			if not canStartDrag then return end
+			
 			_props._mouse1Down = true
 			
 			saveParentProps(_props)
@@ -126,6 +136,8 @@ function DraggableUI.Enable(draggableObj: Draggable)
 	
 	_props._inputEnded = guiObj.InputEnded:Connect(function(input: InputObject)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if not canStartDrag then return end
+			
 			_props._mouse1Down = false
 			revertToParentProps(_props)
 			disconnectCon(_props._moveCon)
