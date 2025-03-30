@@ -1,5 +1,5 @@
 --!strict
---[[ v1.0.0 - 3/29/2025 ]]
+--[[ v1.0.1 - 3/29/2025 ]]
 local DraggableUI = {}
 
 local UIS = game:GetService("UserInputService")
@@ -103,7 +103,7 @@ function DraggableUI.Enable(draggableObj: Draggable)
 
 	_props._inputBegan = guiObj.InputBegan:Connect(function(input: InputObject)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			canStartDrag = draggableObj.BeforeDragStart and draggableObj.BeforeDragStart()
+			canStartDrag = (draggableObj.BeforeDragStart and draggableObj.BeforeDragStart()) or true
 			
 			if not canStartDrag then return end
 			
