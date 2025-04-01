@@ -1,6 +1,8 @@
 --!strict
---[[ v1.0.1 - 3/29/2025 ]]
-local DraggableUI = {}
+--[[ v1.2.0 - 4/1/2025 ]]
+local DraggableUI = {
+	DEBUG_PRINT_MODE = false
+}
 
 local UIS = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
@@ -27,6 +29,7 @@ type _Draggable = {
 	_parent: any,
 	_size: Vector2,
 	_pos: Vector2,
+	_zIndex: number,
 	_dragParent: ScreenGui,
 	_parentSize: UDim2,
 	_parentPos: UDim2,
@@ -37,7 +40,7 @@ type _Draggable = {
 }
 
 
-local _objs: { [number]: _Draggable } = {}
+local _objs: { [number]: _Draggable | boolean } = {}
 
 
 local function disconnectCon(con: RBXScriptConnection?)
@@ -51,7 +54,7 @@ local function revertToParentProps(_props: _Draggable)
 	guiObj.Parent = _props._parent
 	guiObj.Size = _props._parentSize
 	guiObj.Position = _props._parentPos
-	guiObj.ZIndex -= 10
+	guiObj.ZIndex -= _props._zIndex
 end
 
 local function saveParentProps(_props: _Draggable)
@@ -61,6 +64,7 @@ local function saveParentProps(_props: _Draggable)
 	_props._parent = guiObj.Parent
 	_props._parentPos = guiObj.Position
 	_props._parentSize = guiObj.Size
+	_props._zIndex = guiObj.ZIndex
 end
 
 
@@ -75,28 +79,46 @@ function DraggableUI.new(guiObj: GuiObject): Draggable
 		_parent = nil,
 		_size = Vector2.zero,
 		_pos = Vector2.zero,
+		_zIndex = 1,
 		_dragParent = screenGui,
 		_parentSize = UDim2.new(),
 		_parentPos = UDim2.new(),
 		_guiInsetIgnored = screenGui.IgnoreGuiInset::boolean
 	}::_Draggable
 	
-	table.insert(_objs, _props)
+	local id
+	local vacantSpotFilled = false
+	for i,v in ipairs(_objs) do
+		if v then continue end
+		_objs[i] = _props
+		vacantSpotFilled = true
+		id = i
+		break
+	end
+	
+	if not vacantSpotFilled then
+		table.insert(_objs, _props)
+		id = #_objs
+	end
 	
 	local props = {
-		ID = #_objs
+		ID = id
 	}::Draggable
+	
+	if DraggableUI.DEBUG_PRINT_MODE then
+		warn("Draggable created; ID =", props.ID)
+	end
 	
 	return props
 end
 
 function DraggableUI.IsDragging(draggableObj: Draggable): boolean
-	local _props = _objs[draggableObj.ID]
+	local _props: _Draggable = _objs[draggableObj.ID]::_Draggable
 	return _props._dragging
 end
 
 function DraggableUI.Enable(draggableObj: Draggable)
-	local _props = _objs[draggableObj.ID]
+	local _props: _Draggable = _objs[draggableObj.ID]::_Draggable
 	local guiObj = _props._instance
 	
 	local canStartDrag = true
@@ -115,7 +137,7 @@ function DraggableUI.Enable(draggableObj: Draggable)
 			guiObj.Parent = _props._dragParent
 			guiObj.Size = UDim2.new(0, _props._size.X, 0, _props._size.Y)
 			guiObj.Position = UDim2.new(0, math.ceil(_props._pos.X), 0, _props._pos.Y+guiInset.Y)
-			guiObj.ZIndex += 10
+			guiObj.ZIndex = 100
 			
 			local initialMousePos = UIS:GetMouseLocation()
 			local offset = _props._pos - initialMousePos + guiInset
@@ -155,10 +177,12 @@ function DraggableUI.Enable(draggableObj: Draggable)
 end
 
 function DraggableUI.Disable(draggableObj: Draggable)
-	local _props = _objs[draggableObj.ID]
-	
+	local _props: _Draggable = _objs[draggableObj.ID]::_Draggable
 	_props._mouse1Down = false
-	revertToParentProps(_props)
+	
+	if _props._instance.Parent ~= nil and _props._dragging then
+		revertToParentProps(_props)
+	end
 	disconnectCon(_props._inputBegan)
 	disconnectCon(_props._inputEnded)
 	disconnectCon(_props._moveCon)
@@ -168,7 +192,7 @@ function DraggableUI.Destroy(draggableObj: Draggable)
 	if _objs[draggableObj.ID] == nil then error("[DragagbleUI]: Attempt to call DraggableUI.Destroy on nil;", 0) end
 	
 	DraggableUI.Disable(draggableObj)
-	table.remove(_objs, draggableObj.ID)
+	_objs[draggableObj.ID] = false
 end
 
 
