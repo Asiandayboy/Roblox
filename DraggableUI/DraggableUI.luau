@@ -1,5 +1,8 @@
 --!strict
---[[ v1.2.0 - 4/1/2025 ]]
+--[[ v1.3.0 - 4/1/2025 
+	[Changes]
+	- option to drag from center or maintain offset from mouse position
+]]
 local DraggableUI = {
 	DEBUG_PRINT_MODE = false
 }
@@ -28,6 +31,7 @@ type _Draggable = {
 	_dragging: boolean,
 	_parent: any,
 	_size: Vector2,
+	_anchorPoint: Vector2,
 	_pos: Vector2,
 	_zIndex: number,
 	_dragParent: ScreenGui,
@@ -37,6 +41,7 @@ type _Draggable = {
 	_inputBegan: RBXScriptConnection?,
 	_inputEnded: RBXScriptConnection?,
 	_guiInsetIgnored: boolean,
+	_dragFromCenter: boolean,
 }
 
 
@@ -55,20 +60,23 @@ local function revertToParentProps(_props: _Draggable)
 	guiObj.Size = _props._parentSize
 	guiObj.Position = _props._parentPos
 	guiObj.ZIndex -= _props._zIndex
+	guiObj.AnchorPoint = _props._anchorPoint
 end
 
 local function saveParentProps(_props: _Draggable)
 	local guiObj =_props._instance
 	_props._size = guiObj.AbsoluteSize
 	_props._pos = guiObj.AbsolutePosition
+	
 	_props._parent = guiObj.Parent
-	_props._parentPos = guiObj.Position
 	_props._parentSize = guiObj.Size
+	_props._parentPos = guiObj.Position
 	_props._zIndex = guiObj.ZIndex
+	_props._anchorPoint = guiObj.AnchorPoint
 end
 
 
-function DraggableUI.new(guiObj: GuiObject): Draggable
+function DraggableUI.new(guiObj: GuiObject, dragFromCenter: boolean?): Draggable
 	local screenGui = guiObj:FindFirstAncestorWhichIsA("ScreenGui") -- used as the parent to guiObj when dragging 
 	if not screenGui then error("Could not find an ancestor screenGui to anchor the draggable object", 0) end
 	
@@ -77,12 +85,14 @@ function DraggableUI.new(guiObj: GuiObject): Draggable
 		_mouse1Down = false,
 		_dragging = false,
 		_parent = nil,
+		_anchorPoint = Vector2.zero,
 		_size = Vector2.zero,
 		_pos = Vector2.zero,
 		_zIndex = 1,
 		_dragParent = screenGui,
 		_parentSize = UDim2.new(),
 		_parentPos = UDim2.new(),
+		_dragFromCenter = dragFromCenter or false,
 		_guiInsetIgnored = screenGui.IgnoreGuiInset::boolean
 	}::_Draggable
 	
@@ -122,6 +132,7 @@ function DraggableUI.Enable(draggableObj: Draggable)
 	local guiObj = _props._instance
 	
 	local canStartDrag = true
+	local dragFromCenter = _props._dragFromCenter
 
 	_props._inputBegan = guiObj.InputBegan:Connect(function(input: InputObject)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -133,14 +144,21 @@ function DraggableUI.Enable(draggableObj: Draggable)
 			
 			saveParentProps(_props)
 			local guiInset = _props._guiInsetIgnored and GuiService:GetGuiInset() or Vector2.zero
+			local initialMousePos = UIS:GetMouseLocation()
 
 			guiObj.Parent = _props._dragParent
 			guiObj.Size = UDim2.new(0, _props._size.X, 0, _props._size.Y)
-			guiObj.Position = UDim2.new(0, math.ceil(_props._pos.X), 0, _props._pos.Y+guiInset.Y)
 			guiObj.ZIndex = 100
+
+			if dragFromCenter then
+				guiObj.AnchorPoint = Vector2.new(0.5, 0.5)
+				guiObj.Position = UDim2.new(0, initialMousePos.X, 0, initialMousePos.Y)
+			else
+				guiObj.AnchorPoint = Vector2.zero
+				guiObj.Position = UDim2.new(0, math.ceil(_props._pos.X), 0, (_props._pos.Y+guiInset.Y))
+			end
 			
-			local initialMousePos = UIS:GetMouseLocation()
-			local offset = _props._pos - initialMousePos + guiInset
+			local offset = _props._pos - initialMousePos + guiInset -- used for when dragFromCenter = false
 
 			_props._moveCon = UIS.InputChanged:Connect(function(uisInput: InputObject)
 				if uisInput.UserInputType == Enum.UserInputType.MouseMovement and _props._mouse1Down then
@@ -149,7 +167,11 @@ function DraggableUI.Enable(draggableObj: Draggable)
 					end
 					_props._dragging = true
 					local mouse = UIS:GetMouseLocation()
-					guiObj.Position = UDim2.new(0, mouse.X + offset.X, 0, mouse.Y + offset.Y)
+					if dragFromCenter then
+						guiObj.Position = UDim2.new(0, mouse.X, 0, mouse.Y)
+					else
+						guiObj.Position = UDim2.new(0, mouse.X + offset.X, 0, mouse.Y + offset.Y)
+					end
 					if draggableObj.OnDragMove then task.spawn(draggableObj.OnDragMove, mouse) end
 				end
 			end)
