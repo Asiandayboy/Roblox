@@ -1,7 +1,7 @@
 --!strict
---[[ v1.3.0 - 4/1/2025 
+--[[ v1.3.1 - 4/4/2025 
 	[Changes]
-	- option to drag from center or maintain offset from mouse position
+	- fixed BeforeDragStart bug always being set to true
 ]]
 local DraggableUI = {
 	DEBUG_PRINT_MODE = false
@@ -136,7 +136,11 @@ function DraggableUI.Enable(draggableObj: Draggable)
 
 	_props._inputBegan = guiObj.InputBegan:Connect(function(input: InputObject)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			canStartDrag = (draggableObj.BeforeDragStart and draggableObj.BeforeDragStart()) or true
+			if draggableObj.BeforeDragStart then
+				canStartDrag = draggableObj.BeforeDragStart()
+			else
+				canStartDrag = true
+			end
 			
 			if not canStartDrag then return end
 			
